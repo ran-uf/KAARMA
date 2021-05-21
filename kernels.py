@@ -18,3 +18,7 @@ def heaviside(u1, u2, t, a):
     for t1, t2 in zip(u1, u2):
         sm += (t1 - t2) ** 2
     return np.exp(- a * sm)
+
+
+def gaussian(a1, a2, a):
+    return np.exp(- a * np.sum((a1 - a2) ** 2))
