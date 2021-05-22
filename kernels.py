@@ -1,7 +1,16 @@
 import numpy as np
 
 
+class Phi:
+    def __init__(self, u):
+        self.u = u
+
+
 def heaviside(u1, u2, t, a):
+
+    if isinstance(u1, Phi) & isinstance(u2, Phi):
+        u1 = u1.u
+        u2 = u2.u
 
     def pad(u, s, d):
         nu = np.zeros(s)
