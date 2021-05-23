@@ -11,7 +11,7 @@ class KAARMA:
         self.t = t
         self.lr = lr
         self.A = np.random.random((1, ns))
-        self.S = np.random.random((1, ns))
+        # self.S = np.random.random((1, ns))
 
         self.II = np.zeros((ny, ns))
         self.II[:, ns - ny:] = np.eye(ny)
@@ -28,7 +28,12 @@ class KAARMA:
             mm[i] = self.compute_kernel(self.PHI[i], u, s1, s2)
         return mm.T
 
-    # def train(self):
+    def train(self, u, y, epochs):
+        for i in range(epochs):
+            for (du, dy) in zip(u, y):
+                s = np.random.random((2, self.ns))
+                for frame in du:
+                    s = np.vstack([s, self.A.T @ self.compute_kernel_batches(Phi(frame), s[-1], s[-2])])
 
     def test(self, u, y):
         for (du, dy) in zip(u, y):
