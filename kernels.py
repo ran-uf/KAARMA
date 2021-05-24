@@ -8,10 +8,6 @@ class Phi:
 
 def heaviside(u1, u2, t, a):
 
-    if isinstance(u1, Phi) & isinstance(u2, Phi):
-        u1 = u1.u
-        u2 = u2.u
-
     def pad(u, s, d):
         nu = np.zeros(s)
         aa = np.size(u)
@@ -27,6 +23,18 @@ def heaviside(u1, u2, t, a):
     for t1, t2 in zip(u1, u2):
         sm += (t1 - t2) ** 2
     return np.exp(- a * sm)
+
+
+def heaviside_multi_channel(u1, u2, t, a):
+
+    if isinstance(u1, Phi) & isinstance(u2, Phi):
+        u1 = u1.u
+        u2 = u2.u
+
+    res = []
+    for (u_1, u_2) in zip(u1, u2):
+        res.append(heaviside(u_1, u_2, t, a))
+    return np.mean(res)
 
 
 def gaussian(a1, a2, a):
