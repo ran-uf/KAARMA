@@ -33,7 +33,10 @@ def toonehot(data, n):
     return m
 
 
-model = KAARMA(20, 10, 1, 1, 1)
+t = 0.025
+fps = 100
+
+model = KAARMA(20, 10, 0.05, 0.05, t)
 
 test_y = np.load('test_y.npy')
 train_y = np.load('train_y.npy')
@@ -45,12 +48,22 @@ train_x_frame = []
 test_x_frame = []
 
 for x in train_x:
-    train_x_frame.append(split_frame(x, 0.025, 0.01))
+    train_x_frame.append(split_frame(x, t, 1 / fps))
 for x in test_x:
-    test_x_frame.append(split_frame(x, 0.025, 0.01))
+    test_x_frame.append(split_frame(x, t, 1 / fps))
 
-train_y = toonehot(train_y, 10)
+
+num_data = np.size(train_y)
+index = np.random.permutation(num_data)
+train_y_shuffle = np.zeros(num_data)
+train_y_shuffle[index] = train_y
+
+train_y = toonehot(train_y_shuffle, 10)
 test_oh_y = toonehot(test_y, 10)
+
+train_x = []
+for i in index:
+    train_x.append(train_x_frame[i])
 
 with open('train_x_frame.txt', 'wb') as f:
     pickle.dump(train_x_frame, f)
@@ -65,6 +78,6 @@ with open('test_x_frame.txt', 'wb') as f:
 # y = [np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 1])]
 print('start training')
 for i in range(1000):
-    model.train(train_x_frame, train_y, 1, 0.1)
+    model.train(train_x, train_y, 1, 0.1)
     loss = model.test(test_x_frame, test_oh_y, test_y)
 

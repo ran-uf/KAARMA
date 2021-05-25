@@ -45,6 +45,7 @@ for i in train_x_gtf:
     # for (j, f) in zip(i, freq):
     #     #  thetas.append(1 / 50 / target_frequency[i] * m[i])
     #     thetas.append(0.02 / f * 4000)
+    m = 0.02 * np.max(i)
     train_impulse_trains.append(generate_impulse_train_multi_channels(i, 8000, 0.1, 1000))
 
 with open('train_x_impulses_simple.txt', 'wb') as f:

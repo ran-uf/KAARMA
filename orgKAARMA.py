@@ -1,6 +1,8 @@
 from kernels import heaviside_multi_channel, gaussian, Phi
 import numpy as np
 import logging
+from multiprocessing.dummy import Pool as ThreadPool
+
 
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 DATE_FORMAT = "%m/%d/%Y %H:%M:%S %p"
@@ -26,6 +28,10 @@ class KAARMA:
     def compute_kernel(self, u1, u2, s1, s2):
         return gaussian(s1, s2, self.a_s) * heaviside_multi_channel(u1, u2, self.t, self.a_u)
 
+    def compute_kernel_multi(self, a):
+        (u1, u2, s1, s2) = a
+        return gaussian(s1, s2, self.a_s) * heaviside_multi_channel(u1, u2, self.t, self.a_u)
+
     def compute_kernel_batches(self, u, s):
         mm = np.zeros(self.m)
         for i in range(self.m):
@@ -36,7 +42,8 @@ class KAARMA:
         e = y - pred
         a_p = []
         for i in range(self.ns):
-            a_p.append((v[:, i, :] @ self.II.T @ e.T))
+            print(v.shape)
+            a_p.append((v[:, i, :] @ self.II.T @ e))
         a_p = np.array(a_p).T
 
         self.A = np.concatenate([self.A, lr * a_p], axis=0)
@@ -47,18 +54,28 @@ class KAARMA:
     def update_quan_weights(self, pred, y, v, phi_p, s_p, lr, q):
         e = y - pred
         a_p = []
+        if v.ndim != 3:
+            print('v_dim: ', v.ndim)
+            return
         for i in range(self.ns):
-            a_p.append((v[:, i, :] @ self.II.T @ e.T))
+            a_p.append((v[:, i, :] @ self.II.T @ e))
         a_p = np.array(a_p).T
 
         m_p = len(phi_p)
         for j in range(m_p):
-            dis = np.zeros(self.m)
-            for i in range(self.m):
-                dis[i] = 1 - self.compute_kernel(self.PHI[i], phi_p[j], self.S[i], s_p[j])
+            # dis = np.zeros(self.m)
+            # for i in range(self.m):
+            #     dis[i] = 1 - self.compute_kernel(self.PHI[i], phi_p[j], self.S[i], s_p[j])
+
+            pool = ThreadPool()
+            dis = pool.map(self.compute_kernel_multi, zip(self.PHI, [phi_p[j]] * self.m, self.S, [s_p[j]] * self.m))
+            pool.close()
+            pool.join()
+
             index = np.argmin(dis)
             if np.min(dis) < q:
                 self.A[index] = self.A[index] + a_p[j]
+                # print('one memory saved')
             else:
                 self.PHI = self.PHI + [phi_p[j]]
                 self.S = np.concatenate([self.S, s_p[j][np.newaxis, :]], axis=0)
@@ -66,8 +83,12 @@ class KAARMA:
                 self.m = self.m + 1
 
     def train(self, u, y, epochs, lr):
+        sz = y.shape[0]
         for i in range(epochs):
+            print('epoch: ', i)
+            j = 0
             for (du, dy) in zip(u, y):
+                j = j + 1
                 s_p = np.zeros((1, self.ns))
                 phi_p = []
                 v = []
@@ -88,9 +109,9 @@ class KAARMA:
 
                 pred = self.II @ s_p[-1]
                 # self.update_weights(pred, y, np.array(v), phi_p, s_p[:-1], lr)
-                self.update_quan_weights(pred, dy, np.array(v), phi_p, s_p[:-1], lr, 0.01)
+                self.update_quan_weights(pred, dy, np.array(v), phi_p, s_p[:-1], lr, 0.2)
                 logging.info("m: "+str(self.m) + ' loss_train: ' + str(np.mean((pred - dy)) ** 2))
-                print('\rm: ', self.m, 'loss_train:', np.mean((pred - dy)) ** 2, end=' ')
+                print('\rm: ', self.m, 'loss_train:', np.mean((pred - dy)) ** 2, 'progress: ', j / sz, end=' ')
 
     def test(self, u, y, index):
         loss_lt = []

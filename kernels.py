@@ -34,6 +34,11 @@ def heaviside_multi_channel(u1, u2, t, a):
     res = []
     for (u_1, u_2) in zip(u1, u2):
         res.append(heaviside(u_1, u_2, t, a))
+
+    # pool = ThreadPool()
+    # result = pool.map(heaviside, zip(u1, u2))
+    # pool.close()
+    # pool.join()
     return np.mean(res)
 
 
