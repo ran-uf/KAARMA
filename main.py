@@ -40,8 +40,8 @@ model = KAARMA(20, 10, 0.05, 0.05, t)
 
 test_y = np.load('test_y.npy')
 train_y = np.load('train_y.npy')
-train_x = pickle.load(open('train_x_impulses_simple.txt', 'rb'))
-test_x = pickle.load(open('test_x_impulses_simple.txt', 'rb'))
+train_x = pickle.load(open('train_x_impulses_normalize.txt', 'rb'))
+test_x = pickle.load(open('test_x_impulses_normalize.txt', 'rb'))
 
 
 train_x_frame = []
@@ -65,13 +65,13 @@ train_x = []
 for i in index:
     train_x.append(train_x_frame[i])
 
-with open('train_x_frame.txt', 'wb') as f:
-    pickle.dump(train_x_frame, f)
-    f.close()
-
-with open('test_x_frame.txt', 'wb') as f:
-    pickle.dump(test_x_frame, f)
-    f.close()
+# with open('train_x_frame.txt', 'wb') as f:
+#     pickle.dump(train_x_frame, f)
+#     f.close()
+#
+# with open('test_x_frame.txt', 'wb') as f:
+#     pickle.dump(test_x_frame, f)
+#     f.close()
 
 
 # x = [[[np.array([0.1, 0.2, 0.3]), np.array([0.2, 0.3, 0.4])], [np.array([0.1, 0.2, 0.3]), np.array([0.2, 0.3, 0.4])]]]
