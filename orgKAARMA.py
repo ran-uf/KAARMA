@@ -24,6 +24,7 @@ class KAARMA:
 
         self.PHI = [Phi([[]])]
         self.m = 1
+        self.epoch = 1
 
     def compute_kernel(self, u1, u2, s1, s2):
         return gaussian(s1, s2, self.a_s) * heaviside_multi_channel(u1, u2, self.t, self.a_u)
@@ -85,7 +86,6 @@ class KAARMA:
     def train(self, u, y, epochs, lr):
         sz = y.shape[0]
         for i in range(epochs):
-            print('epoch: ', i)
             j = 0
             for (du, dy) in zip(u, y):
                 j = j + 1
@@ -110,8 +110,10 @@ class KAARMA:
                 pred = self.II @ s_p[-1]
                 # self.update_weights(pred, y, np.array(v), phi_p, s_p[:-1], lr)
                 self.update_quan_weights(pred, dy, np.array(v), phi_p, s_p[:-1], lr, 0.2)
-                logging.info("m: "+str(self.m) + ' loss_train: ' + str(np.mean((pred - dy)) ** 2))
-                print('\rm: ', self.m, 'loss_train:', np.mean((pred - dy)) ** 2, 'progress: ', j / sz, end=' ')
+                logging.info('epoch: ' + str(self.epoch) + "m: "+str(self.m) + ' loss_train: ' + str(np.mean((pred - dy)) ** 2))
+                print('\repoch:', self.epoch, 'm: ', self.m, 'loss_train:', np.mean((pred - dy)) ** 2, 'progress: ', j / sz, end=' ')
+
+            self.epoch = self.epoch + 1
 
     def test(self, u, y, index):
         loss_lt = []
