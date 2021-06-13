@@ -36,7 +36,7 @@ class NICE:
 
 
 class KAARMA:
-    def __init__(self, ns, ny, a_s, a_u, u_type):
+    def __init__(self, ns, ny, a_s, a_u, u_type, kfunc):
         self.ns = ns
         self.ny = ny
         self.a_s = a_s
@@ -47,22 +47,11 @@ class KAARMA:
         self.II = np.zeros((ny, ns))
         self.II[:, ns - ny:] = np.eye(ny)
 
-    def compute_kernel(self, u1, u2, s1, s2):
-        a = gaussian(s1, s2, self.a_s)
-        # if a < 1e-5:
-        #     return 0
-        return a * heaviside_multi_channel(u1, u2, self.a_u)
+        self.kfunc = kfunc
 
-    def compute_kernel_multi(self, a):
-        (u1, u2, s1, s2) = a
-        return gaussian(s1, s2, self.a_s) * heaviside_multi_channel(u1, u2, self.a_u)
-
-    def compute_kernel_batches(self, u, s):
-        self.m = self.A.shape[0]
-        mm = np.zeros(self.m)
-        for i in range(self.m):
-            mm[i] = self.compute_kernel(self.PHI[i], u, s, self.S[i])
-        return mm.T
+    def compute_kernel_u(self, u):
+        return self.kfunc(self.phi, u, self.a_u)
+        # return np.exp(-self.a_u * (self.phi - u) ** 2)
 
     def update_weights(self, pred, y, v, phi_p, s_p, lr):
         e = y - pred
@@ -141,7 +130,7 @@ class KAARMA:
                 if di.dtype == 'object':
                     print(di.dtype)
                 k_s = np.exp(-self.a_s * np.sum(di ** 2, axis=1))[:, np.newaxis]
-                k_u = np.exp(-self.a_u * (self.phi - u[j]) ** 2)
+                k_u = self.compute_kernel_u(u[j])
                 ki = k_s * k_u
                 ss = self.A.T @ ki
                 ss = ss.T
@@ -224,6 +213,7 @@ class KAARMA:
 
 if __name__ == '__main__':
     from tomita import generate_tomita4
+    from kernels import gaussian
 
     x_train = []
     y_train = []
@@ -238,7 +228,7 @@ if __name__ == '__main__':
     x_train = np.array(x_train, dtype='object')
     y_train = np.array(y_train, dtype='object')
 
-    model = KAARMA(6, 2, 2, 2, np.array([x[0, 0]]))
+    model = KAARMA(6, 2, 2, 2, np.array([x[0, 0]]), gaussian)
     ls_loss = [1]
     ls_acc = []
     lr = 0.1

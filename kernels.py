@@ -42,4 +42,5 @@ def heaviside_multi_channel(u1, u2, a):
 
 def gaussian(a1, a2, a):
     # print('norm_states:', np.sum((a1 - a2) ** 2))
-    return np.exp(- a * np.sum((a1 - a2) ** 2))
+    return np.exp(- a * (a1 - a2) ** 2)
+
