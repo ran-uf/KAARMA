@@ -20,10 +20,11 @@ def norm_spikes_multi_channel(u1, u2):
 
 
 def heaviside(u1, u2, a):
-    return np.exp(- a * norm_spikes(u1, u2))
+    # print('norm_spikes: ', norm_spikes(u1, u2))
+    return norm_spikes(u1, u2)
 
 
-def heaviside_multi_channel(u1, u2,a):
+def heaviside_multi_channel(u1, u2, a):
     if isinstance(u1, Phi) & isinstance(u2, Phi):
         u1 = u1.u
         u2 = u2.u
@@ -36,8 +37,9 @@ def heaviside_multi_channel(u1, u2,a):
     # result = pool.map(heaviside, zip(u1, u2))
     # pool.close()
     # pool.join()
-    return np.mean(res)
+    return np.exp(-a * np.mean(res))
 
 
 def gaussian(a1, a2, a):
+    # print('norm_states:', np.sum((a1 - a2) ** 2))
     return np.exp(- a * np.sum((a1 - a2) ** 2))

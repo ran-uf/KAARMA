@@ -1,4 +1,4 @@
-from orgKAARMA import KAARMA
+from KAARMA import KAARMA
 import numpy as np
 import pickle
 
@@ -13,7 +13,6 @@ def toonehot(data, n):
 t = 0.025
 fps = 100
 
-model = KAARMA(20, 10, 0.05, 0.05)
 
 test_y = np.load('./data/small/test_y_small.npy')
 test_x = np.load('./data/small/test_x_final.npy', allow_pickle=True)
@@ -45,9 +44,9 @@ test_y_oh = toonehot(test_y, 10)
 # x = [[[np.array([0.1, 0.2, 0.3]), np.array([0.2, 0.3, 0.4])], [np.array([0.1, 0.2, 0.3]), np.array([0.2, 0.3, 0.4])]]]
 # y = [np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 1])]
 
-
+model = KAARMA(15, 10, 1, 1)
 print('start training')
-for i in range(1000):
-    model.train(train_x_shuffle[:100], train_y_oh[:100], test_x, test_y_oh, test_y, 1, 0.9, 0)
-
+for i in range(1):
+    # model.train(train_x_shuffle[:10], train_y_oh[:10], train_y_shuffle[:1], test_x, test_y_oh, test_y, 1000, 0.9, 0.01)
+    model.train_new(train_x_shuffle[:10], train_y_oh[:10], train_y_shuffle[:10], 0.7)
 
