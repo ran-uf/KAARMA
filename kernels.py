@@ -44,3 +44,6 @@ def gaussian(a1, a2, a):
     # print('norm_states:', np.sum((a1 - a2) ** 2))
     return np.exp(- a * (a1 - a2) ** 2)
 
+
+def gaussian_spikes(a1, a2, a):
+    return np.exp(- a * np.sum(np.sum((a1 - a2) ** 2, axis=1), axis=1, keepdims=True))

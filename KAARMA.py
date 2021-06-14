@@ -104,7 +104,7 @@ class KAARMA:
         for f in x:
             di = self.S - s
             k_s = np.exp(-self.a_s * np.sum(di ** 2, axis=1))
-            k_u = np.exp(-self.a_u * (self.phi - f) ** 2)
+            k_u = self.compute_kernel_u(f)
             ki = k_s * k_u.reshape(-1)
             s = self.A.T @ ki
         pred = self.II @ s
@@ -116,6 +116,7 @@ class KAARMA:
         return np.sum((y - pred) ** 2), np.argmax(pred) == np.argmax(y)
 
     def train(self, x, y, lr, dq):
+        min_loss = 2
         for (u, d) in zip(x, y):
             # generate s-1
             d = np.float64(d)
@@ -164,6 +165,7 @@ class KAARMA:
                     #    print('bug')
                     dis_s = np.sum((self.S - s) ** 2, axis=1)
                     dis_u = (self.phi - uu) ** 2
+                    dis_u = np.sum(np.sum(dis_u, axis=1), axis=1)
                     dis_u = dis_u.reshape(-1)
                     dis = self.a_s * dis_s + self.a_u * dis_u
                     dis = dis[:m]
@@ -177,17 +179,20 @@ class KAARMA:
                     else:
                         # print(self.S.shape, s.shap
                         self.A = np.concatenate((self.A, lr * a.T), axis=0)
-                        self.phi = np.concatenate((self.phi, np.array([uu])[np.newaxis, :]), axis=0)
+                        self.phi = np.concatenate((self.phi, uu[np.newaxis, :]), axis=0)
                         self.S = np.concatenate((self.S, s), axis=0)
 
-        loss_train = []
-        num_train = 0
-        for (train_x, train_y) in zip(x, y):
-            ls, count = self.test_one_sampe(train_x, train_y)
-            loss_train.append(ls)
-            num_train = num_train + count
+            loss_train = []
+            num_train = 0
+            for (train_x, train_y) in zip(x, y):
+                ls, count = self.test_one_sampe(train_x, train_y)
+                loss_train.append(ls)
+                num_train = num_train + count
 
-        print('\rloss_train: ', np.mean(loss_train), ' acc_train:', num_train / len(loss_train), ' m:', self.A.shape[0])
+            print('\rloss_train: ', np.mean(loss_train), ' acc_train:', num_train / len(loss_train), ' m:', self.A.shape[0])
+
+            if np.mean(loss_train) < 0.95 * min_loss:
+                lr = lr * 0.95
 
         return np.mean(loss_train), num_train / len(loss_train)
 

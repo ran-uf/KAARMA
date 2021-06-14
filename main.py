@@ -1,6 +1,7 @@
 from KAARMA import KAARMA
 import numpy as np
 import pickle
+from kernels import gaussian_spikes
 
 
 def toonehot(data, n):
@@ -43,10 +44,10 @@ test_y_oh = toonehot(test_y, 10)
 
 # x = [[[np.array([0.1, 0.2, 0.3]), np.array([0.2, 0.3, 0.4])], [np.array([0.1, 0.2, 0.3]), np.array([0.2, 0.3, 0.4])]]]
 # y = [np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 1])]
-
-model = KAARMA(15, 10, 1, 1)
+# print(train_x_shuffle[0][0].shape)
+model = KAARMA(15, 10, 2, 4, train_x_shuffle[0][0], gaussian_spikes)
 print('start training')
-for i in range(1):
+for i in range(100):
     # model.train(train_x_shuffle[:10], train_y_oh[:10], train_y_shuffle[:1], test_x, test_y_oh, test_y, 1000, 0.9, 0.01)
-    model.train_new(train_x_shuffle[:10], train_y_oh[:10], train_y_shuffle[:10], 0.7)
+    model.train(train_x_shuffle[:50], train_y_oh[:50], 0.1, 0.01)
 
