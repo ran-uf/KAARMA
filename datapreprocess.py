@@ -6,45 +6,68 @@ import pickle
 from IFModel import generate_impulse_train_multi_channels
 
 
-DEBUG = True
-folder = './data/small/'
+DEBUG = False
+folder = './data/small_01/'
+# train_x_raw = np.load(folder + 'x_small.npy', allow_pickle=True)
 train_x_raw = np.load(folder + 'train_x_small.npy', allow_pickle=True)
 test_x_raw = np.load(folder + 'test_x_small.npy', allow_pickle=True)
 
 train_x_normalize = []
 test_x_normalize = []
 for x in train_x_raw:
-    train_x_normalize.append(x / np.max(x))
+    train_x_normalize.append(x.astype(np.float64) / np.max(x))
 for x in test_x_raw:
-    test_x_normalize.append(x / np.max(x))
+    test_x_normalize.append(x.astype(np.float64) / np.max(x))
 
 fil = Chen(fs=8000)
 
 train_x_gtf = []
 test_x_gtf = []
+num = 0
 for x in train_x_normalize:
-    train_x_gtf.append(fil.process(x).real)
+    a = fil.process(x).real
+    a = a / np.max(abs(a), axis=1)[:, np.newaxis] * 4
+    train_x_gtf.append(a)
+    num += 1
 for x in test_x_normalize:
-    test_x_gtf.append(fil.process(x).real)
+    a = fil.process(x).real
+    a = a / np.max(a, axis=1)[:, np.newaxis] * 4
+    test_x_gtf.append(a)
 
 train_impulse_trains = []
 test_impulse_trains = []
 
 alpha = 0.05
-theta = 0.03
+theta = 1000
+
+freq = np.array([99, 192, 341, 501, 685, 908, 1134, 1473, 1821, 2200, 2720, 3326, 4075, 4990, 5977, 7283])
+
 for i in train_x_gtf:
-    train_impulse_trains.append(generate_impulse_train_multi_channels(i, 8000, alpha, theta))
+    train_impulse_trains.append(generate_impulse_train_multi_channels(i, 8000, alpha, theta / freq))
 
 with open(folder + 'train_x_impulses_normalize.txt', 'wb') as f:
     pickle.dump(train_impulse_trains, f)
     f.close()
 
 for i in test_x_gtf:
-    test_impulse_trains.append(generate_impulse_train_multi_channels(i, 8000, alpha, theta))
+    test_impulse_trains.append(generate_impulse_train_multi_channels(i, 8000, alpha, theta / freq))
 
 with open(folder + 'test_x_impulses_normalize.txt', 'wb') as f:
     pickle.dump(test_impulse_trains, f)
     f.close()
+
+count = []
+for i in range(len(train_impulse_trains)):
+    for channel in range(16):
+        mean_count = len(train_impulse_trains[i][channel]) / (train_x_gtf[i][channel].size / 8) * 25
+        count.append(mean_count)
+
+for i in range(len(test_impulse_trains)):
+    for channel in range(16):
+        mean_count = len(test_impulse_trains[i][channel]) / (test_x_gtf[i][channel].size / 8) * 25
+        count.append(mean_count)
+
+print('min:', np.mean(count), ' max:', np.max(count))
 
 
 def extract_frame(t, t_s, t_e):
@@ -90,12 +113,14 @@ for x in train_x_frame:
     for f in x:
         for channel in f:
             length = len(channel)
+            # print(length)
             if length > max_num_spikes:
                 max_num_spikes = length
 for x in test_x_frame:
     for f in x:
         for channel in f:
             length = len(channel)
+            # print(length)
             if length > max_num_spikes:
                 max_num_spikes = length
 
@@ -133,11 +158,15 @@ if DEBUG:
             for chan in frame:
                 if not all(x <= y for x, y in zip(chan, chan[1:])):
                     print('not ascend')
-    for x in test_x:
-        for frame in x:
-            for chan in frame:
-                if not all(x <= y for x, y in zip(chan, chan[1:])):
-                    print('not ascend')
+    # for x in test_x:
+    #     for frame in x:
+    #         for chan in frame:
+    #             if not all(x <= y for x, y in zip(chan, chan[1:])):
+    #                 print('not ascend')
 
 np.save(folder + 'train_x_final.npy', np.array(train_x, dtype='object'))
 np.save(folder + 'test_x_final.npy', np.array(test_x, dtype='object'))
+
+# x = np.load(folder + 'x_final.npy')
+# y = np.load(folder + 'y_small.npy')
+

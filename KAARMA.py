@@ -5,44 +5,16 @@ from multiprocessing.dummy import Pool as ThreadPool
 import time
 
 
-SHOW_TIME = False
-
-
-class NICE:
-    def __init__(self, dc, dq, ns, lr):
-        self.dc = dc
-        self.dq = dq
-        self.lr = lr
-        self.ns = ns
-        self.phis = []
-        self.S = []
-        self.A = []
-        self.nClusters = 0
-
-    def initialize(self, phi, s, y1):
-        self.A = self.A.append(y1.reshape((1, self.ns)) * self.lr)
-        self.phis.append([phi])
-        self.S = self.S.append(s.reshape((self.ns, 1)))
-        self.nClusters = 1
-
-    def compute_distance(self, i, phi, s):
-        # for (phi0, s0) in zip(self.phis, self.S):
-        return
-
-    def update(self, phi, s, e):
-        dis = np.zeros(self.nClusters)
-        for i in range(self.nClusters):
-            dis[i] = self.compute_distance(i, phi, s)
-
-
 class KAARMA:
     def __init__(self, ns, ny, a_s, a_u, u_type, kfunc):
         self.ns = ns
         self.ny = ny
         self.a_s = a_s
         self.a_u = a_u
+        # np.random.seed(0)
         self.S = 2 * np.random.random((1, ns)) - 1
         self.phi = u_type[np.newaxis, :]
+        # np.random.seed(0)
         self.A = 2 * np.random.random((1, ns)) - 1
         self.II = np.zeros((ny, ns))
         self.II[:, ns - ny:] = np.eye(ny)
@@ -114,25 +86,27 @@ class KAARMA:
     def test_one_sampe(self, x, y):
         pred = self.forward(x)
         return np.sum((y - pred) ** 2), np.argmax(pred) == np.argmax(y)
+        # return np.sum((y - pred) ** 2), round(pred[0]) == y
 
     def train(self, x, y, lr, dq):
         min_loss = 2
         for (u, d) in zip(x, y):
             # generate s-1
-            d = np.float64(d)
-            s_p = []
-            phi = []
-            v = []
-            ss = np.random.random((1, self.ns))
+            # d = np.float64(d)
+            s_p = np.zeros((u.shape[0], self.ns))
+            phi = np.zeros(u.shape)
+            v = np.zeros((u.shape[0], self.ns, self.ns))
+            ss = np.zeros((1, self.ns))
             for j in range(u.shape[0]):
-                s_p.append(ss)
-                phi.append(u[j])
+                s_p[j] = ss.reshape(-1)
+                phi[j] = u[j]
                 di = self.S - ss
-                if di.dtype == 'object':
-                    print(di.dtype)
+                # if di.dtype == 'object':
+                #     print(di.dtype)
                 k_s = np.exp(-self.a_s * np.sum(di ** 2, axis=1))[:, np.newaxis]
                 k_u = self.compute_kernel_u(u[j])
                 ki = k_s * k_u
+                # print(ki.tolist())
                 ss = self.A.T @ ki
                 ss = ss.T
                 # print(ki.tolist())
@@ -143,11 +117,11 @@ class KAARMA:
                     gamma_i = gamma_i[:, np.newaxis]
                 gamma_i = gamma_i @ di
                 if j == 0:
-                    v.append(np.eye(self.ns))
+                    v[j] = np.eye(self.ns)
                 else:
                     for index in range(len(v)):
                         v[index] = gamma_i @ v[index]
-                    v.append(np.eye(self.ns))
+                    v[j] = np.eye(self.ns)
             pred = self.II @ ss.T
 
             e = np.atleast_2d(d).T - pred
@@ -155,7 +129,7 @@ class KAARMA:
             #     print('\rerror:', e, ' m:', self.A.shape[0])
 
             # update weights
-            start = max(0, len(s_p) - 5)
+            start = max(0, len(s_p) - 10)
             num_steps = 0
             for (s, uu, vv) in zip(s_p, phi, v):
                 num_steps += 1
@@ -165,7 +139,8 @@ class KAARMA:
                     #    print('bug')
                     dis_s = np.sum((self.S - s) ** 2, axis=1)
                     dis_u = (self.phi - uu) ** 2
-                    dis_u = np.sum(np.sum(dis_u, axis=1), axis=1)
+                    dis_u = np.array([np.sum(dis_u[i]) for i in range(dis_u.shape[0])])
+                    # dis_u = np.sum(np.sum(dis_u, axis=1), axis=1)
                     dis_u = dis_u.reshape(-1)
                     dis = self.a_s * dis_s + self.a_u * dis_u
                     dis = dis[:m]
@@ -180,7 +155,8 @@ class KAARMA:
                         # print(self.S.shape, s.shap
                         self.A = np.concatenate((self.A, lr * a.T), axis=0)
                         self.phi = np.concatenate((self.phi, uu[np.newaxis, :]), axis=0)
-                        self.S = np.concatenate((self.S, s), axis=0)
+                        # self.phi = np.concatenate((self.phi, np.array([[uu]])), axis=0)
+                        self.S = np.concatenate((self.S, s[np.newaxis, :]), axis=0)
 
             loss_train = []
             num_train = 0
@@ -190,9 +166,6 @@ class KAARMA:
                 num_train = num_train + count
 
             print('\rloss_train: ', np.mean(loss_train), ' acc_train:', num_train / len(loss_train), ' m:', self.A.shape[0])
-
-            if np.mean(loss_train) < 0.95 * min_loss:
-                lr = lr * 0.95
 
         return np.mean(loss_train), num_train / len(loss_train)
 
@@ -220,27 +193,35 @@ if __name__ == '__main__':
     from tomita import generate_tomita4
     from kernels import gaussian
 
-    x_train = []
-    y_train = []
-    for i in [6, 7, 8, 9, 10]:
-        x, y = generate_tomita4(40, i)
-        for xx, yy in zip(x, y):
-            x_train.append(xx)
-            # yyy = yy[-1]
-            yyy = np.zeros(2)
-            yyy[int(yy[-1])] = 1
-            y_train.append(yyy)
-    x_train = np.array(x_train, dtype='object')
-    y_train = np.array(y_train, dtype='object')
+    # x_train = []
+    # y_train = []
+    # for i in [6, 7, 8, 9, 10]:
+    #     x, y = generate_tomita4(40, i)
+    #     for xx, yy in zip(x, y):
+    #         x_train.append(xx.T[:, np.newaxis])
+    #         yyy = yy[-1]
+    #         # yyy = np.zeros(2)
+    #         # yyy[int(yy[-1])] = 1
+    #         y_train.append(yyy)
+    # x_train = np.array(x_train, dtype='object')
+    # y_train = np.array(y_train, dtype='object')
+    #
+    # np.save('x_train_tomita.npy', x_train)
+    # np.save('y_train_tomita.npy', y_train)
 
-    model = KAARMA(6, 2, 2, 2, np.array([x[0, 0]]), gaussian)
+    x_train = np.load('x_train_tomita.npy', allow_pickle=True)
+    y_train = np.load('y_train_tomita.npy', allow_pickle=True)
+
+    model = KAARMA(6, 1, 2, 2, x_train[0][0], gaussian)
+    # model = NiceKAARMA(6, 1, 2, 2, np.array([x[0, 0]]), 100000, 0.01)
     ls_loss = [1]
     ls_acc = []
     lr = 0.1
-    for i in range(100):
+    for i in range(10):
         # model.train_1(x_train, y_train, .05, 0.01)
-        loss, acc = model.train(x_train, y_train, lr, 0.5)
-        if loss < 0.95 * ls_loss[-1]:
-            lr = 0.95 * lr
+        loss, acc = model.train(x_train, y_train, lr, 0.1)
+        # loss, acc = model.train(x_train, y_train, lr)
+        # if loss < 0.95 * ls_loss[-1]:
+        #     lr = 0.95 * lr
         ls_loss.append(loss)
         ls_acc.append(acc)
