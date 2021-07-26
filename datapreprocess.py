@@ -7,10 +7,10 @@ from IFModel import generate_impulse_train_multi_channels
 
 
 DEBUG = False
-folder = './data/small_01/'
+folder = './data/full/'
 # train_x_raw = np.load(folder + 'x_small.npy', allow_pickle=True)
-train_x_raw = np.load(folder + 'train_x_small.npy', allow_pickle=True)
-test_x_raw = np.load(folder + 'test_x_small.npy', allow_pickle=True)
+train_x_raw = np.load(folder + 'train_x.npy', allow_pickle=True)
+test_x_raw = np.load(folder + 'test_x.npy', allow_pickle=True)
 
 train_x_normalize = []
 test_x_normalize = []
