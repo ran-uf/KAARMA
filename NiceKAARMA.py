@@ -379,7 +379,7 @@ class NiceKAARMA:
                 (pos, ) = np.nonzero(np.array(cluster) == idx)
                 if idx == -1:
                     for nn in pos:
-                        distance = [self.clusters[i].distance(uu, s) for i in range(num_clusters, len(self.clusters))]
+                        distance = [self.clusters[i].distance(phi[nn], s_p[nn]) for i in range(num_clusters, len(self.clusters))]
                         if distance == []:
                             self.clusters.append(Cluster(self.a_s, self.a_u, phi[nn], s_p[nn], (a[nn]).reshape(-1), self.alpha_r, e, m_k))
                         else:
