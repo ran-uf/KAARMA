@@ -23,11 +23,12 @@ class Cluster:
         #     # m_k = self.alpha * self.A @ self.A.T + self.alpha_r
         #     m_k = np.atleast_2d(m_k)
         #     m_k = np.linalg.inv(m_k)
-
+        if np.ndim(a) == 1:
+            a = a[:, np.newaxis]
         if e is not None:
-            self.A = a * m_k * e
+            self.A = (a @ m_k @ e).T
         else:
-            self.A = a[np.newaxis, :]
+            self.A = a.T
             m_k = self.alpha * self.A @ self.A.T + self.alpha_r
             m_k = np.atleast_2d(m_k)
             m_k = np.linalg.inv(m_k)
@@ -35,6 +36,7 @@ class Cluster:
         self.center = (u, self.S[0])
         self.num = 1
 
+        # self.b = self.alpha ** 2 * a @ m_k @ a.T
         self.b = self.alpha ** 2 * self.A.T @ m_k @ self.A
 
         self.a_k = None
@@ -176,9 +178,9 @@ class NiceKAARMA:
         self.II[:, ns - ny:] = np.eye(ny)
 
         self.clusters = []
-        # np.random.seed(0)
+        np.random.seed(0)
         s = np.random.random(ns)
-        # np.random.seed(1)
+        np.random.seed(1)
         a = np.random.random(ns)
 
         self.alpha_r = 1
@@ -372,11 +374,23 @@ class NiceKAARMA:
                     m_k += self.clusters[idx].m_k(phi[pos], s_p[pos], np.array(a)[pos])
             m_k = np.linalg.inv(m_k + self.alpha_r * np.identity(self.ny))
 
+            num_clusters = len(self.clusters)
             for idx in set(cluster):
                 (pos, ) = np.nonzero(np.array(cluster) == idx)
                 if idx == -1:
                     for nn in pos:
-                        self.clusters.append(Cluster(self.a_s, self.a_u, phi[nn], s_p[nn], (a[nn]).reshape(-1), self.alpha_r, e, m_k))
+                        distance = [self.clusters[i].distance(uu, s) for i in range(num_clusters, len(self.clusters))]
+                        if distance == []:
+                            self.clusters.append(Cluster(self.a_s, self.a_u, phi[nn], s_p[nn], (a[nn]).reshape(-1), self.alpha_r, e, m_k))
+                        else:
+                            if np.min(distance) <= self.dc:
+                                no = np.argmin(distance)
+                                self.clusters[no + num_clusters].m_k(phi[[nn]], s_p[[nn]], np.array(a)[[nn]])
+                                self.clusters[no + num_clusters].update_kalman(phi[[nn]], s_p[[nn]], m_k, e, self.dq)
+                            else:
+                                self.clusters.append(
+                                    Cluster(self.a_s, self.a_u, phi[nn], s_p[nn], (a[nn]).reshape(-1), self.alpha_r, e,
+                                            m_k))
                 else:
                     self.clusters[idx].update_kalman(phi[pos], s_p[pos], m_k, e, self.dq)
 
